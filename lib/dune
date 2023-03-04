@@ -1,2 +1,4 @@
 (library
+ (modes byte)
+ (libraries angstrom unix)
  (name oshell2))

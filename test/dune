@@ -1,2 +1,3 @@
-(test
- (name oshell2))
+(tests
+ (libraries oshell2 ounit2)
+ (names oshell2))
