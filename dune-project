@@ -12,4 +12,4 @@
 (package
  (name oshell2)
  (synopsis "Shell in OCaml, second try by me")
- (depends ocaml dune))
+ (depends ocaml dune angstrom ounit2))
