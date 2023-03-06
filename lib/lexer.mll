@@ -12,9 +12,9 @@ let newline = '\n' | "\r\n"
 rule token = parse
 | whitespace { token lexbuf }
 | newline { token lexbuf }
-| '>' { RIGHTARROW }
+| number as n '>' { RIGHTARROW(Some (int_of_string n)) }
+| '>' {RIGHTARROW(None)}
 | '<' { LEFTARROW }
-| number as lxm { NUMBER(int_of_string lxm) }
 | word as lxm { WORD lxm }
 | eof { EOF } 
 | _ as lxm { raise @@ SyntaxError("Unexpected char " ^ (String.make 1 lxm)) }

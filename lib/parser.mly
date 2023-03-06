@@ -7,10 +7,9 @@
   redirection: NUMBER? > FILENAME | < FILENAME
 */
 
-%token <int> NUMBER
 %token <string> WORD
 %token LEFTARROW
-%token RIGHTARROW
+%token <int option> RIGHTARROW
 %token EOF
 %start command
 
@@ -21,10 +20,10 @@
 
 redirection:
 | LEFTARROW f = WORD { 0, f }
-| opt = option(NUMBER) RIGHTARROW f = WORD { 
-    match opt with
-    | None -> 1, f
-    | Some n -> n, f
+| fd = RIGHTARROW f = WORD { 
+  match fd with
+  | None -> 1, f
+  | Some n -> n, f
  }
 
 command:
