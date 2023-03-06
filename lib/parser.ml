@@ -41,6 +41,7 @@ let command_parser =
   whitespace_dropping_parser *> 
   sep_by whitespace_dropping_parser word_parser >>= fun args ->
   sep_by whitespace_dropping_parser redirection_parser >>= fun redirections ->
+  whitespace_dropping_parser *>
   return { executable; args; redirections }
 
 let parse_with parser str = parse_string ~consume:All parser str
