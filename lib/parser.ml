@@ -36,6 +36,7 @@ let redirection_parser =
   | None, c | Some _, c -> fail ("Unexpected redirect char " ^ String.make 1 c)
 
 let command_parser =
+  whitespace_dropping_parser *>
   word_parser >>= fun executable ->
   whitespace_dropping_parser *> 
   sep_by whitespace_dropping_parser word_parser >>= fun args ->
