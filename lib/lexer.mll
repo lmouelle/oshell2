@@ -4,7 +4,7 @@
 }
 
 let whitespace = [' ' '\t']+
-let word = [^ '<' '>']+
+let word = ['a'-'z' 'A'-'Z' '0'-'9' '_' '-']+
 let filename = [^ '\x00']+
 let number = ['0' - '9']+
 let newline = '\n' | "\r\n"
