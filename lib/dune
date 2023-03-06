@@ -2,3 +2,8 @@
  (modes byte)
  (libraries angstrom unix)
  (name oshell2))
+
+(menhir
+ (modules parser))
+
+(ocamllex lexer)

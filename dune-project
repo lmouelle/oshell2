@@ -9,7 +9,9 @@
 
 (authors "Lucas Ouellette-Falkenstein")
 
+(using menhir 2.0)
+
 (package
  (name oshell2)
  (synopsis "Shell in OCaml, second try by me")
- (depends ocaml dune angstrom ounit2))
+ (depends ocaml dune angstrom ounit2 menhir))
