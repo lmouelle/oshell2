@@ -4,8 +4,8 @@
 }
 
 let whitespace = [' ' '\t']+
-let word = [^ '<' '>' ' ' '\t']+
-let filename = [^ '\x00']+
+let string = '"' [^ '"']* '"'
+let word = [^ '<' '>' ' ' '\t']+ | string
 let number = ['0' - '9']+
 let newline = '\n' | "\r\n"
 
@@ -16,6 +16,5 @@ rule token = parse
 | '<' { LEFTARROW }
 | number as lxm { NUMBER(int_of_string lxm) }
 | word as lxm { WORD lxm }
-| filename as lxm { FILENAME lxm }
 | eof { EOF } 
 | _ as lxm { raise @@ SyntaxError("Unexpected char " ^ (String.make 1 lxm)) }

@@ -9,7 +9,6 @@
 
 %token <int> NUMBER
 %token <string> WORD
-%token <string> FILENAME
 %token LEFTARROW
 %token RIGHTARROW
 %token EOF
@@ -21,8 +20,8 @@
 %%
 
 redirection:
-| LEFTARROW f = FILENAME { 0, f }
-| opt = option(NUMBER) RIGHTARROW f = FILENAME { 
+| LEFTARROW f = WORD { 0, f }
+| opt = option(NUMBER) RIGHTARROW f = WORD { 
     match opt with
     | None -> 1, f
     | Some n -> n, f
