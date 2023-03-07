@@ -25,7 +25,7 @@ let exec_command { executable; args; redirections } =
   if pid < 0 then raise @@ ExecError "Fork failure"
   else if pid = 0 then (
     List.iter dupfile redirections;
-    Unix.execv executable (Array.of_list (executable :: args)))
+    Unix.execvp executable (Array.of_list (executable :: args)))
   else
     let _, status = Unix.waitpid [ Unix.WUNTRACED ] pid in
     match status with
