@@ -2,6 +2,10 @@ open Ast
 
 exception ExecError of string
 
+let lastexitcode = ref (-1)
+
+let get_last_exit_code _ = !lastexitcode
+
 let exec_command { executable; args; redirections } =
   let dupfile (fd, filename) =
     match fd with
@@ -29,5 +33,5 @@ let exec_command { executable; args; redirections } =
   else
     let _, status = Unix.waitpid [ Unix.WUNTRACED ] pid in
     match status with
-    | Unix.WEXITED exitcode -> exitcode
+    | Unix.WEXITED exitcode -> lastexitcode := exitcode;
     | _ -> failwith "Stopped and signalled processes unimplemented"

@@ -1,8 +1,6 @@
 open Oshell2.Parseutils
 open Oshell2.Executor
 
-let lastexitcode = ref (-1)
-
 let exec str =
   let command = parse_string str in
   exec_command command
@@ -12,7 +10,7 @@ let repl _ =
   let rec repl' _ =
     print_string "> ";
     let ln = read_line () in
-    lastexitcode := exec ln;
+    if (String.trim ln = "$?") then Printf.printf "%d\n" (get_last_exit_code ()) else exec ln;
     repl' ()
   in
   try repl' () with End_of_file -> ()
