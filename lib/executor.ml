@@ -4,7 +4,7 @@ exception ExecError of string
 
 let lastexitcode = ref 0
 
-let redirect {file_desc = fd; filename; _} =
+let redirect { file_desc = fd; filename; _ } =
   match fd with
   | 0 ->
       let filehandle = Unix.openfile filename [ O_RDONLY ] 0o640 in
@@ -45,29 +45,34 @@ let exec_pipeline pipeline =
         (Array.of_list (command.executable :: command.args)))
   done;
 
-  let command = pipeline_array.(upper_index_bound) in
-  let pid = Unix.fork () in
-  if pid < 0 then
-    raise @@ ExecError ("Fork failed for command: " ^ command_to_string command)
-  else if pid > 0 then
-    let _, status = Unix.waitpid [ Unix.WUNTRACED ] pid in
-    match status with
-    | Unix.WEXITED exitcode -> lastexitcode := exitcode
-    | _ -> failwith "TODO: Stopped and signalled processes unimplemented"
-  else (
-    List.iter redirect command.redirections;
-    Unix.execvp command.executable
-      (Array.of_list (command.executable :: command.args)));
-  
-  !lastexitcode
+  (* TODO: Handle empty input from the user as a no-op. 
+     Not very satisfied with this, find alternative in parser *)
+  if Array.length pipeline_array = 0 then 0
+  else
+    let command = pipeline_array.(upper_index_bound) in
+    let pid = Unix.fork () in
+    if pid < 0 then
+      raise
+      @@ ExecError ("Fork failed for command: " ^ command_to_string command)
+    else if pid > 0 then
+      let _, status = Unix.waitpid [ Unix.WUNTRACED ] pid in
+      match status with
+      | Unix.WEXITED exitcode -> lastexitcode := exitcode
+      | _ -> failwith "TODO: Stopped and signalled processes unimplemented"
+    else (
+      List.iter redirect command.redirections;
+      Unix.execvp command.executable
+        (Array.of_list (command.executable :: command.args)));
+
+    !lastexitcode
 
 let rec exec_conditional = function
-| BasePipeline p -> exec_pipeline p
-| Or (lhs, rhs) ->
-  let retcode = exec_conditional lhs in
-  if retcode <> 0 then exec_conditional rhs else retcode
-| And (lhs, rhs) ->
-  let retcode = exec_conditional lhs in
-  if retcode <> 0 then retcode else exec_conditional rhs
+  | BasePipeline p -> exec_pipeline p
+  | Or (lhs, rhs) ->
+      let retcode = exec_conditional lhs in
+      if retcode <> 0 then exec_conditional rhs else retcode
+  | And (lhs, rhs) ->
+      let retcode = exec_conditional lhs in
+      if retcode <> 0 then retcode else exec_conditional rhs
 
-let exec = exec_conditional  
+let exec = exec_conditional

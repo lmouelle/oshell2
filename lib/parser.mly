@@ -42,7 +42,7 @@ command:
 | executable = WORD args = list(WORD) redirections = list(redirection) { {executable; args; redirections} }
 
 pipeline:
-| commands = separated_nonempty_list(PIPE, command) { commands }
+| commands = separated_list(PIPE, command) { commands }
 
 conditional:
 | p = pipeline { BasePipeline p }
