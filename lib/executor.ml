@@ -5,7 +5,7 @@ exception ExecError of string
 let lastexitcode = ref 0
 let get_last_exit_code _ = !lastexitcode
 
-let redirect (fd, filename) =
+let redirect {file_desc = fd; filename; _} =
   match fd with
   | 0 ->
       let filehandle = Unix.openfile filename [ O_RDONLY ] 0o640 in

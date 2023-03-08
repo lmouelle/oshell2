@@ -11,7 +11,11 @@ let test_multi_redirect _ =
       {
         executable = "ls";
         args = [ "-l" ];
-        redirections = [ (2, "errfile"); (1, "outfile") ];
+        redirections =
+          [
+            { file_desc = 2; filename = "errfile"; redirection_type = Output };
+            { file_desc = 1; filename = "outfile"; redirection_type = Output };
+          ];
       };
     ]
 
@@ -30,7 +34,12 @@ let test_redir_in_and_out _ =
         executable = "foo";
         args = [ "-Z" ];
         redirections =
-          [ (0, "infile"); (2, "errfile"); (1, "outfile"); (666, "etcfile") ];
+          [
+            { file_desc = 0; redirection_type = Input; filename = "infile" };
+            { file_desc = 2; filename = "errfile"; redirection_type = Output };
+            { file_desc = 1; filename = "outfile"; redirection_type = Output };
+            { file_desc = 666; filename = "etcfile"; redirection_type = Output };
+          ];
       };
     ]
 

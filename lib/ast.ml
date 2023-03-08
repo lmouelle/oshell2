@@ -1,5 +1,10 @@
-(** Mapping of file descriptor to file name *)
-type redirection = int * string
+type redirection_type = Input | Output
+
+type redirection = {
+  redirection_type : redirection_type;
+  filename : string;
+  file_desc : int;
+}
   
 type command = {
   executable : string;
@@ -12,7 +17,7 @@ type pipeline = command list
 type program = pipeline
 
 let command_to_string { executable; args; redirections } =
-  let redirection_to_string (fd, filename) =
+  let redirection_to_string {filename; file_desc = fd; _} =
     string_of_int fd ^ "->" ^ filename
   in
   let bare_string =

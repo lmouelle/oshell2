@@ -13,8 +13,9 @@ rule token = parse
 | whitespace { token lexbuf }
 | newline { token lexbuf }
 | number as n '>' { RIGHTARROW(Some (int_of_string n)) }
-| '>' {RIGHTARROW(None)}
-| '<' { LEFTARROW }
+| number as n '<' { LEFTARROW(Some (int_of_string n)) }
+| '>' { RIGHTARROW(None) }
+| '<' { LEFTARROW(None) }
 | '|' { PIPE }
 | word as lxm { WORD lxm }
 | eof { EOF } 

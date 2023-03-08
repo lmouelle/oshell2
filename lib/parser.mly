@@ -5,11 +5,13 @@
   program: pipeline EOF
   pipeline: command (| command)*
   command: WORD WORD* redirection*
-  redirection: NUMBER? > FILENAME | < FILENAME
+  
+  // Note there is no spaces permitted between FILE_DESC and >
+  redirection: FILE_DESC? > FILENAME | FILE_DESC? < FILENAME 
 */
 
 %token <string> WORD
-%token LEFTARROW
+%token <int option> LEFTARROW
 %token <int option> RIGHTARROW
 %token PIPE
 %token EOF
@@ -23,11 +25,15 @@
 %%
 
 redirection:
-| LEFTARROW f = WORD { 0, f }
+| fd = LEFTARROW f = WORD { 
+  match fd with
+  | None -> { redirection_type = Input; filename = f; file_desc = 0 }
+  | Some n -> { redirection_type = Input; filename = f; file_desc = n }
+}
 | fd = RIGHTARROW f = WORD { 
   match fd with
-  | None -> 1, f
-  | Some n -> n, f
+  | None -> { redirection_type = Input; filename = f; file_desc = 1 }
+  | Some n -> { redirection_type = Input; filename = f; file_desc = n }
  }
 
 command:
