@@ -15,6 +15,7 @@ rule token = parse
 | number as n '>' { RIGHTARROW(Some (int_of_string n)) }
 | '>' {RIGHTARROW(None)}
 | '<' { LEFTARROW }
+| '|' { PIPE }
 | word as lxm { WORD lxm }
 | eof { EOF } 
 | _ as lxm { raise @@ SyntaxError("Unexpected char " ^ (String.make 1 lxm)) }

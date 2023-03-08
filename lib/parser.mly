@@ -2,7 +2,8 @@
     open Ast
 %}
 /*
-  program: command*
+  program: pipeline EOF
+  pipeline: command (| command)*
   command: WORD WORD* redirection*
   redirection: NUMBER? > FILENAME | < FILENAME
 */
@@ -10,11 +11,14 @@
 %token <string> WORD
 %token LEFTARROW
 %token <int option> RIGHTARROW
+%token PIPE
 %token EOF
-%start command
+%start program
 
 %type <Ast.redirection> redirection
 %type <Ast.command> command
+%type <Ast.pipeline> pipeline
+%type <Ast.program> program
 
 %%
 
@@ -27,4 +31,10 @@ redirection:
  }
 
 command:
-| executable = WORD args = list(WORD) redirections = list(redirection) EOF { {executable; args; redirections} }
+| executable = WORD args = list(WORD) redirections = list(redirection) { {executable; args; redirections} }
+
+pipeline:
+| commands = separated_nonempty_list(PIPE, command) { commands }
+
+program:
+| pipeline EOF { $1 }

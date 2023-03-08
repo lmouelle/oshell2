@@ -7,6 +7,10 @@ type command = {
   redirections : redirection list;
 }
 
+type pipeline = command list
+(* TODO: Update the program typedef each time I add a new grammar feature *)
+type program = pipeline
+
 let command_to_string { executable; args; redirections } =
   let redirection_to_string (fd, filename) =
     string_of_int fd ^ "->" ^ filename
@@ -20,3 +24,6 @@ let command_to_string { executable; args; redirections } =
     |> String.concat ";"
   in
   "{" ^ bare_string ^ "}"
+
+let program_to_string prog =
+  List.map command_to_string prog |> String.concat "|"
