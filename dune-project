@@ -14,4 +14,4 @@
 (package
  (name oshell2)
  (synopsis "Shell in OCaml, second try by me")
- (depends ocaml dune angstrom ounit2 menhir))
+ (depends ocaml dune ounit2 menhir))
