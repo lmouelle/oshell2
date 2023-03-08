@@ -14,12 +14,14 @@
 %token <int option> LEFTARROW
 %token <int option> RIGHTARROW
 %token PIPE
+%token AND OR
 %token EOF
 %start program
 
 %type <Ast.redirection> redirection
 %type <Ast.command> command
 %type <Ast.pipeline> pipeline
+%type <Ast.conditional> conditional
 %type <Ast.program> program
 
 %%
@@ -42,5 +44,10 @@ command:
 pipeline:
 | commands = separated_nonempty_list(PIPE, command) { commands }
 
+conditional:
+| p = pipeline { BasePipeline p }
+| p1 = pipeline AND p2 = pipeline { And(BasePipeline(p1), BasePipeline(p2)) }
+| p1 = pipeline OR p2 = pipeline { Or(BasePipeline(p1), BasePipeline(p2)) }
+
 program:
-| pipeline EOF { $1 }
+| c = conditional EOF { c }

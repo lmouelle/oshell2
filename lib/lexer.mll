@@ -16,6 +16,8 @@ rule token = parse
 | number as n '<' { LEFTARROW(Some (int_of_string n)) }
 | '>' { RIGHTARROW(None) }
 | '<' { LEFTARROW(None) }
+| "&&" { AND }
+| "||" { OR }
 | '|' { PIPE }
 | word as lxm { WORD lxm }
 | eof { EOF } 

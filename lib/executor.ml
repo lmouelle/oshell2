@@ -3,7 +3,6 @@ open Ast
 exception ExecError of string
 
 let lastexitcode = ref 0
-let get_last_exit_code _ = !lastexitcode
 
 let redirect {file_desc = fd; filename; _} =
   match fd with
@@ -58,4 +57,15 @@ let exec_pipeline pipeline =
   else (
     List.iter redirect command.redirections;
     Unix.execvp command.executable
-      (Array.of_list (command.executable :: command.args)))
+      (Array.of_list (command.executable :: command.args)));
+  
+  !lastexitcode
+
+let rec exec_conditional = function
+| BasePipeline p -> exec_pipeline p
+| Or (lhs, rhs) ->
+  let retcode = exec_conditional lhs in
+  if retcode <> 0 then exec_conditional rhs else retcode
+| And (lhs, rhs) ->
+  let retcode = exec_conditional lhs in
+  if retcode <> 0 then retcode else exec_conditional rhs

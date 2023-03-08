@@ -7,7 +7,7 @@ let repl _ =
     print_string "> ";
     let ln = read_line () in
     let prog = parse_string ln in
-    exec_pipeline prog;
+    ignore(exec_conditional prog);
     repl' ()
   in
   try repl' () with End_of_file -> ()

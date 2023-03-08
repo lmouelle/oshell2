@@ -13,8 +13,16 @@ type command = {
 }
 
 type pipeline = command list
-(* TODO: Update the program typedef each time I add a new grammar feature *)
-type program = pipeline
+
+type conditional = 
+| BasePipeline of pipeline
+| And of conditional * conditional
+| Or of conditional * conditional
+
+(* TODO: Update the program typedef each time I add a new grammar feature.
+   Requires updating eveything everywhere else. So tedious. Perhaps investigate using modules
+   for encapsulation? *)
+type program = conditional
 
 let command_to_string { executable; args; redirections } =
   let redirection_to_string {filename; file_desc = fd; _} =
@@ -30,5 +38,12 @@ let command_to_string { executable; args; redirections } =
   in
   "{" ^ bare_string ^ "}"
 
-let program_to_string prog =
-  List.map command_to_string prog |> String.concat "|"
+let pipeline_to_string pipeline =
+  List.map command_to_string pipeline |> String.concat "|"
+
+let rec conditional_to_string = function
+| BasePipeline p -> pipeline_to_string p
+| And(lhs, rhs) -> 
+  conditional_to_string lhs ^ "&&" ^ conditional_to_string rhs
+| Or(lhs, rhs) ->  
+  conditional_to_string lhs ^ "||" ^ conditional_to_string rhs
