@@ -69,3 +69,5 @@ let rec exec_conditional = function
 | And (lhs, rhs) ->
   let retcode = exec_conditional lhs in
   if retcode <> 0 then retcode else exec_conditional rhs
+
+let exec = exec_conditional  
