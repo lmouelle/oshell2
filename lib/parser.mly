@@ -34,8 +34,8 @@ redirection:
 }
 | fd = RIGHTARROW f = WORD { 
   match fd with
-  | None -> { redirection_type = Input; filename = f; file_desc = 1 }
-  | Some n -> { redirection_type = Input; filename = f; file_desc = n }
+  | None -> { redirection_type = Output; filename = f; file_desc = 1 }
+  | Some n -> { redirection_type = Output; filename = f; file_desc = n }
  }
 
 command:
