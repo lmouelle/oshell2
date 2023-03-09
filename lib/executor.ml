@@ -22,6 +22,7 @@ let redirect { file_desc = fd; filename; _ } =
   | _ -> raise @@ ExecError "TODO: Impl arbitrary file descriptor redirection"
 
 let exec_pipeline pipeline =
+  let tempin = Unix.dup Unix.stdin in
   let pipeline_array = Array.of_list pipeline in
   let upper_index_bound = Array.length pipeline_array - 1 in
   (* Iterate from 0 to just max index - 1, performing the final fork after this loop*)
@@ -64,6 +65,7 @@ let exec_pipeline pipeline =
       Unix.execvp command.executable
         (Array.of_list (command.executable :: command.args)));
 
+    Unix.dup2 tempin Unix.stdin;
     !lastexitcode
 
 let rec exec_conditional = function
