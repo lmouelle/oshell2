@@ -6,7 +6,7 @@ type redirection = {
   file_desc : int;
 }
 
-type variable_type = String of string | Variable of string
+type variable_type = String of string | Variable of string | Exitcode of int
 type variable_entry = (string * variable_type)
   
 type command = {
@@ -30,11 +30,12 @@ type conditional =
 type program = conditional
 
 let command_to_string { executable; args; redirections; variables } =
-  let redirection_to_string {filename; file_desc = fd; _} =
-    string_of_int fd ^ "->" ^ filename
+  let redirection_to_string {filename; file_desc = fd; redirection_type} =
+    let seperator = match redirection_type with Input -> "<" | Output -> ">" in
+    string_of_int fd ^ seperator ^ filename
   in
   let variable_to_string (varname, varval) =
-    let resolvedval = match varval with String s -> s | Variable v -> "$" ^ v in
+    let resolvedval = match varval with String s -> s | Variable v -> "$" ^ v | Exitcode i -> string_of_int i in
     varname ^ "=" ^ resolvedval
   in
   let bare_string =
