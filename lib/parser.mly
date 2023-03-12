@@ -46,8 +46,8 @@ pipeline:
 
 conditional:
 | p = pipeline { BasePipeline p }
-| p1 = pipeline AND p2 = pipeline { And(BasePipeline(p1), BasePipeline(p2)) }
-| p1 = pipeline OR p2 = pipeline { Or(BasePipeline(p1), BasePipeline(p2)) }
+| p1 = pipeline AND p2 = conditional { And(BasePipeline(p1), p2) }
+| p1 = pipeline OR p2 = conditional { Or(BasePipeline(p1), p2) }
 
 program:
 | c = conditional EOF { c }
