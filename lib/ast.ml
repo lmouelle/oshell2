@@ -5,12 +5,17 @@ type redirection = {
   filename : string;
   file_desc : int;
 }
+
+type variable_type = String of string | Variable of string
+type variable_entry = (string * variable_type)
   
 type command = {
   executable : string;
   args : string list;
   redirections : redirection list;
+  variables: variable_entry list
 }
+
 
 type pipeline = command list
 
@@ -24,15 +29,20 @@ type conditional =
    for encapsulation? *)
 type program = conditional
 
-let command_to_string { executable; args; redirections } =
+let command_to_string { executable; args; redirections; variables } =
   let redirection_to_string {filename; file_desc = fd; _} =
     string_of_int fd ^ "->" ^ filename
+  in
+  let variable_to_string (varname, varval) =
+    let resolvedval = match varval with String s -> s | Variable v -> "$" ^ v in
+    varname ^ "=" ^ resolvedval
   in
   let bare_string =
     [
       executable;
       String.concat " " args;
       List.map redirection_to_string redirections |> String.concat ",";
+      List.map variable_to_string variables |> String.concat ","
     ]
     |> String.concat ";"
   in

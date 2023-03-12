@@ -2,29 +2,38 @@
     open Ast
 %}
 /*
-  program: pipeline EOF
+  program: conditional EOF
+  conditional: pipeline (cond_op conditional)*
+  cond_op: || | &&
   pipeline: command (| command)*
-  command: WORD WORD* redirection*
+  command: assignment* WORD WORD* redirection* | assignment+
   
   // Note there is no spaces permitted between FILE_DESC and >
   redirection: FILE_DESC? > FILENAME | FILE_DESC? < FILENAME 
 */
 
+%token <string> VAR
 %token <string> WORD
 %token <int option> LEFTARROW
 %token <int option> RIGHTARROW
 %token PIPE
+%token EQ
 %token AND OR
 %token EOF
-%start program
+%start program assignment
 
 %type <Ast.redirection> redirection
 %type <Ast.command> command
 %type <Ast.pipeline> pipeline
 %type <Ast.conditional> conditional
 %type <Ast.program> program
+%type <Ast.variable_entry> assignment
 
 %%
+
+assignment:
+| varname = VAR EQ varval = WORD { (varname, String varval) }
+| varname = VAR EQ varval = VAR { (varname, Variable varval) }
 
 redirection:
 | fd = LEFTARROW f = WORD { 
@@ -39,7 +48,10 @@ redirection:
  }
 
 command:
-| executable = WORD args = list(WORD) redirections = list(redirection) { {executable; args; redirections} }
+| variables = list(assignment) executable = WORD args = list(WORD) redirections = list(redirection) 
+{ {executable; args; redirections; variables} }
+| variables = assignment+
+{ {executable = String.empty; args = []; redirections = []; variables} }
 
 pipeline:
 | commands = separated_list(PIPE, command) { commands }
