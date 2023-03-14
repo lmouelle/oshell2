@@ -1,11 +1,11 @@
 open Ast
 
+type exec_result = { exitcode : int; shell_vars : variable_entry list }
+
 exception ExecError of string
 exception NoSuchVar of string
 
 let lastexitcode = ref 0
-
-type exec_result = { exitcode : int; shell_vars : variable_entry list }
 
 let redirect { file_desc = fd; filename; _ } =
   match fd with
