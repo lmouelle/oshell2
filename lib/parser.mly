@@ -47,8 +47,12 @@ redirection:
   | Some n -> { redirection_type = Output; filename = f; file_desc = n }
  }
 
+word_or_var:
+| w = WORD { w }
+| v = VAR { v }
+
 command:
-| variables = list(assignment) executable = WORD args = list(WORD) redirections = list(redirection) 
+| variables = assignment* executable = WORD args = word_or_var* redirections = redirection*
 { {executable; args; redirections; variables} }
 | variables = assignment+
 { {executable = String.empty; args = []; redirections = []; variables} }
