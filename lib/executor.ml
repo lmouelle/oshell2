@@ -1,8 +1,11 @@
 open Ast
 
 exception ExecError of string
+exception NoSuchVar of string
 
 let lastexitcode = ref 0
+
+type exec_result = { exitcode : int; shell_vars : variable_entry list }
 
 let redirect { file_desc = fd; filename; _ } =
   match fd with
@@ -21,14 +24,31 @@ let redirect { file_desc = fd; filename; _ } =
       Unix.dup2 filehandle Unix.stderr
   | _ -> raise @@ ExecError "TODO: Impl arbitrary file descriptor redirection"
 
-let exec_pipeline pipeline =
+let rec resolve_var shell_vars varname =
+  if String.starts_with ~prefix:"$" varname then
+    match List.assoc_opt varname shell_vars with
+    | None -> raise @@ NoSuchVar varname
+    | Some (Exitcode i) -> string_of_int i
+    | Some (String s) -> s
+    | Some (Variable v) -> resolve_var shell_vars v
+  else varname
+
+let resolve_vars shell_vars { executable; variables; args; redirections } =
+  let shell_vars' = variables @ shell_vars in
+  let executable' = resolve_var shell_vars' executable in
+  let args' = List.map (resolve_var shell_vars') args in
+  { executable = executable'; variables; redirections; args = args' }
+
+let exec_pipeline shell_vars pipeline : exec_result =
   let tempin = Unix.dup Unix.stdin in
   let pipeline_array = Array.of_list pipeline in
+  let accumulated_shell_vars = ref shell_vars in
   let upper_index_bound = Array.length pipeline_array - 1 in
   (* Iterate from 0 to just max index - 1, performing the final fork after this loop*)
   for i = 0 to upper_index_bound - 1 do
     let fd_in, fd_out = Unix.pipe () in
-    let command = pipeline_array.(i) in
+    let command = pipeline_array.(i) |> resolve_vars !accumulated_shell_vars in
+    accumulated_shell_vars := command.variables @ !accumulated_shell_vars;
     let pid = Unix.fork () in
     if pid < 0 then
       raise
@@ -42,15 +62,21 @@ let exec_pipeline pipeline =
       Unix.close fd_out;
       Unix.close fd_in;
       List.iter redirect command.redirections;
-      Unix.execvp command.executable
-        (Array.of_list (command.executable :: command.args)))
+      if command.executable <> String.empty then
+        Unix.execvp command.executable
+          (Array.of_list (command.executable :: command.args))
+      else exit 0)
   done;
 
-  (* TODO: Handle empty input from the user as a no-op. 
+  (* TODO: Handle empty input from the user as a no-op.
      Not very satisfied with this, find alternative in parser *)
-  if Array.length pipeline_array = 0 then 0
+  if Array.length pipeline_array = 0 then
+    { exitcode = !lastexitcode; shell_vars = !accumulated_shell_vars }
   else
-    let command = pipeline_array.(upper_index_bound) in
+    let command =
+      pipeline_array.(upper_index_bound) |> resolve_vars shell_vars
+    in
+    accumulated_shell_vars := command.variables @ !accumulated_shell_vars;
     let pid = Unix.fork () in
     if pid < 0 then
       raise
@@ -62,19 +88,25 @@ let exec_pipeline pipeline =
       | _ -> failwith "TODO: Stopped and signalled processes unimplemented"
     else (
       List.iter redirect command.redirections;
-      Unix.execvp command.executable
-        (Array.of_list (command.executable :: command.args)));
+      if command.executable <> String.empty then
+        Unix.execvp command.executable
+          (Array.of_list (command.executable :: command.args))
+      else exit 0);
 
     Unix.dup2 tempin Unix.stdin;
-    !lastexitcode
+    { exitcode = !lastexitcode; shell_vars = !accumulated_shell_vars }
 
-let rec exec_conditional = function
-  | BasePipeline p -> exec_pipeline p
+let rec exec_conditional shell_vars = function
+  | BasePipeline p -> exec_pipeline shell_vars p
   | Or (lhs, rhs) ->
-      let retcode = exec_conditional lhs in
-      if retcode <> 0 then exec_conditional rhs else retcode
+      let ({ exitcode; shell_vars } as result) =
+        exec_conditional shell_vars lhs
+      in
+      if exitcode <> 0 then exec_conditional shell_vars rhs else result
   | And (lhs, rhs) ->
-      let retcode = exec_conditional lhs in
-      if retcode <> 0 then retcode else exec_conditional rhs
+      let ({ exitcode; shell_vars } as result) =
+        exec_conditional shell_vars lhs
+      in
+      if exitcode <> 0 then result else exec_conditional shell_vars rhs
 
 let exec = exec_conditional

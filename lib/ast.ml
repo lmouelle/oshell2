@@ -29,15 +29,18 @@ type conditional =
    for encapsulation? *)
 type program = conditional
 
+let variable_to_string (varname, varval) =
+  let resolvedval = match varval with String s -> s | Variable v -> "$" ^ v | Exitcode i -> string_of_int i in
+  varname ^ "=" ^ resolvedval
+
+let shell_vars_to_string shell_vars =
+  List.map variable_to_string shell_vars |> String.concat ","
+
+let redirection_to_string {filename; file_desc = fd; redirection_type} =
+  let seperator = match redirection_type with Input -> "<" | Output -> ">" in
+  string_of_int fd ^ seperator ^ filename
+
 let command_to_string { executable; args; redirections; variables } =
-  let redirection_to_string {filename; file_desc = fd; redirection_type} =
-    let seperator = match redirection_type with Input -> "<" | Output -> ">" in
-    string_of_int fd ^ seperator ^ filename
-  in
-  let variable_to_string (varname, varval) =
-    let resolvedval = match varval with String s -> s | Variable v -> "$" ^ v | Exitcode i -> string_of_int i in
-    varname ^ "=" ^ resolvedval
-  in
   let bare_string =
     [
       executable;
