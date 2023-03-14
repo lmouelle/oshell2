@@ -25,6 +25,18 @@ I was reading [the open group spec for sh as a reference](https://pubs.opengroup
 duplicate a file descriptor to another, we need to call `Unix.dup2`. In C this is simple, just parse out `n` and `k`
 into integers and then do `dup2(src, target)`. In OCaml this won't work. We parse out `n` and `k` as integers in the lexer easily enough, but `Unix.dup2` expects `file_descr` types which are abstract. There is no clear way, I have found so far, to translate from an integer to a file descriptor. So I can't do the file descriptor duplication at the moment.
 
+# Misc issues
+
+I'd like to be able to do something like
+```bash
+$foo = ls
+$foo directory
+```
+
+but sadly my grammar does not accomodate that. It's hard to do that with my setup without shift/reduce conflicts all over.
+How am I supposed to know if the string `$foo directory`, upon seeing the token `$foo`, is a new variable definition or
+an invocation? This definitely is a known problem, but at this time I do not know the answer.
+
 # Features I want
 
 I'm not great at keeping READMEs current so this will get wildly out of date but here is what I have as of writing (March 2023) and what I want.
