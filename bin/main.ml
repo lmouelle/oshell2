@@ -16,10 +16,17 @@ let repl _ =
   in
   repl' []
 
+let runcommand command_string =
+  let prog = parse_string command_string in
+  let {shell_vars = _; exitcode} = exec [] prog in
+  exit exitcode
+
 let () =
-  if Array.length Sys.argv > 2 then (
-    Printf.printf "Usage: oshell2 [script]";
-    exit 64)
-  else if Array.length Sys.argv == 2 then
-    failwith "TODO: Impl running files"
-  else repl ()
+  let len = Array.length Sys.argv in
+  if len < 2 then repl ()
+  else
+    match Sys.argv.(1) with
+    | "-f" -> failwith "TODO:impl running files"
+    | "-i" -> repl ()
+    | "-c" -> runcommand Sys.argv.(2)
+    | _ as etc -> failwith ("Unrecognized flag " ^ etc)
