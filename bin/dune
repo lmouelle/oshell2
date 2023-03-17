@@ -1,5 +1,4 @@
 (executable
  (public_name oshell2)
  (name main)
- (modes byte)
  (libraries oshell2))
