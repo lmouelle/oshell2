@@ -1,3 +1,2 @@
-(tests
- (libraries oshell2 ounit2)
- (names parser_tests))
+(cram
+ (deps %{bin:oshell2}))
