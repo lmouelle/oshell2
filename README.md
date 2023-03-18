@@ -47,12 +47,11 @@ I have:
 - I tolerate empty input, so entering an empty string is a no op
 - I currently track the last exit code so `$?` can be implemented soon
 - Conditionals like `true && ls` or `false || ls`
+- Basic variables persisted during a session
 
 Pipes can contain unlimited redirections, conditionals can contain unlimited pipes.
 
 I want:
-- Variables
-- To get that darn file redirection duplication
 - Wild card expansion? Always felt kind of weird to me, not sure how I want to go about it
 - Functions
 - Loops
