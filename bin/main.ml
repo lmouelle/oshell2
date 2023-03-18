@@ -14,11 +14,11 @@ let repl _ =
     | End_of_file -> ()
     | NoSuchVar name -> (Printf.printf "No known var named: %s"  name)
   in
-  repl' []
+  Unix.handle_unix_error repl' []
 
 let runcommand command_string =
   let prog = parse_string command_string in
-  let {shell_vars = _; exitcode} = exec [] prog in
+  let {shell_vars = _; exitcode} = Unix.handle_unix_error exec [] prog in
   exit exitcode
 
 let () =
