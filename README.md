@@ -23,7 +23,12 @@ Or, using a parser generator + lexer, just clump `NUMBER? >` together into a sin
 
 I was reading [the open group spec for sh as a reference](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_07), and I realized something unfortunate. To support the syntax `n>&k` or `n<&k`, where we
 duplicate a file descriptor to another, we need to call `Unix.dup2`. In C this is simple, just parse out `n` and `k`
-into integers and then do `dup2(src, target)`. In OCaml this won't work. We parse out `n` and `k` as integers in the lexer easily enough, but `Unix.dup2` expects `file_descr` types which are abstract. There is no clear way, I have found so far, to translate from an integer to a file descriptor. So I can't do the file descriptor duplication at the moment.
+into integers and then do `dup2(src, target)`. In OCaml this won't work. We parse out `n` and `k` as integers in the lexer easily enough, but `Unix.dup2` expects `file_descr` types which are abstract. There is no clear way, I have found so far, to translate from an integer to a file descriptor. 
+
+I tried creating C bindings for dup2/create so that we can just pass in integer as a FD around but then comes a second problem emerges; We have to somehow get the values of things like the flag O_RDONLY. It will vary from system to system
+so i somehow need to access that C macro from ocaml code. Not sure how to do this yet.
+
+So I can't do the full file descriptor duplication at the moment.
 
 # Misc issues
 
