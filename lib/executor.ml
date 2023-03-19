@@ -71,7 +71,11 @@ let exec_pipeline shell_vars pipeline : exec_result =
   (* TODO: Handle empty input from the user as a no-op.
      Not very satisfied with this, find alternative in parser *)
   if Array.length pipeline_array = 0 then
-    { exitcode = !lastexitcode; shell_vars = ("$?", String (string_of_int !lastexitcode)) :: !accumulated_shell_vars }
+    {
+      exitcode = !lastexitcode;
+      shell_vars =
+        ("$?", String (string_of_int !lastexitcode)) :: !accumulated_shell_vars;
+    }
   else
     let command =
       pipeline_array.(upper_index_bound) |> resolve_vars shell_vars
@@ -94,7 +98,11 @@ let exec_pipeline shell_vars pipeline : exec_result =
       else exit 0);
 
     Unix.dup2 tempin Unix.stdin;
-    { exitcode = !lastexitcode; shell_vars = ("$?", String (string_of_int !lastexitcode)) ::!accumulated_shell_vars }
+    {
+      exitcode = !lastexitcode;
+      shell_vars =
+        ("$?", String (string_of_int !lastexitcode)) :: !accumulated_shell_vars;
+    }
 
 let rec exec_conditional shell_vars = function
   | BasePipeline p -> exec_pipeline shell_vars p

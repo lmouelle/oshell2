@@ -7,22 +7,21 @@ type redirection = {
 }
 
 type variable_type = String of string | Variable of string | Exitcode of int
-type variable_entry = (string * variable_type)
-  
+type variable_entry = string * variable_type
+
 type command = {
   executable : string;
   args : string list;
   redirections : redirection list;
-  variables: variable_entry list
+  variables : variable_entry list;
 }
-
 
 type pipeline = command list
 
-type conditional = 
-| BasePipeline of pipeline
-| And of conditional * conditional
-| Or of conditional * conditional
+type conditional =
+  | BasePipeline of pipeline
+  | And of conditional * conditional
+  | Or of conditional * conditional
 
 (* TODO: Update the program typedef each time I add a new grammar feature.
    Requires updating eveything everywhere else. So tedious. Perhaps investigate using modules
@@ -30,13 +29,18 @@ type conditional =
 type program = conditional
 
 let variable_to_string (varname, varval) =
-  let resolvedval = match varval with String s -> s | Variable v -> "$" ^ v | Exitcode i -> string_of_int i in
+  let resolvedval =
+    match varval with
+    | String s -> s
+    | Variable v -> "$" ^ v
+    | Exitcode i -> string_of_int i
+  in
   varname ^ "=" ^ resolvedval
 
 let shell_vars_to_string shell_vars =
   List.map variable_to_string shell_vars |> String.concat ","
 
-let redirection_to_string {filename; file_desc = fd; redirection_type} =
+let redirection_to_string { filename; file_desc = fd; redirection_type } =
   let seperator = match redirection_type with Input -> "<" | Output -> ">" in
   string_of_int fd ^ seperator ^ filename
 
@@ -46,7 +50,7 @@ let command_to_string { executable; args; redirections; variables } =
       executable;
       String.concat " " args;
       List.map redirection_to_string redirections |> String.concat ",";
-      List.map variable_to_string variables |> String.concat ","
+      List.map variable_to_string variables |> String.concat ",";
     ]
     |> String.concat ";"
   in
@@ -56,8 +60,8 @@ let pipeline_to_string pipeline =
   List.map command_to_string pipeline |> String.concat "|"
 
 let rec conditional_to_string = function
-| BasePipeline p -> pipeline_to_string p
-| And(lhs, rhs) -> 
-  conditional_to_string lhs ^ "&&" ^ conditional_to_string rhs
-| Or(lhs, rhs) ->  
-  conditional_to_string lhs ^ "||" ^ conditional_to_string rhs
+  | BasePipeline p -> pipeline_to_string p
+  | And (lhs, rhs) ->
+      conditional_to_string lhs ^ "&&" ^ conditional_to_string rhs
+  | Or (lhs, rhs) ->
+      conditional_to_string lhs ^ "||" ^ conditional_to_string rhs
