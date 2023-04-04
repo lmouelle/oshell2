@@ -8,5 +8,5 @@ Try again but this time writing to a file
 
 Try again but writing errors to a file
   $ oshell2 -c "grep illo < doesnotexist.txt"
-  Error executing open syscall on doesnotexist.txt, no such file found
+  Fatal error: exception Unix.Unix_error(Unix.ENOENT, "open", "doesnotexist.txt")
   [2]
