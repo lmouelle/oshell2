@@ -19,8 +19,9 @@
 %token PIPE
 %token EQ
 %token AND OR
+%token SEMICOLON AMPERSAND
 %token EOF
-%start program assignment
+%start program
 
 %type <Ast.redirection> redirection
 %type <Ast.command> command
@@ -28,6 +29,7 @@
 %type <Ast.conditional> conditional
 %type <Ast.program> program
 %type <Ast.variable_entry> assignment
+%type <Ast.shell_list> shell_list
 
 %%
 
@@ -65,5 +67,12 @@ conditional:
 | p1 = pipeline AND p2 = conditional { And(BasePipeline(p1), p2) }
 | p1 = pipeline OR p2 = conditional { Or(BasePipeline(p1), p2) }
 
+shell_list:
+| c = conditional { BaseConditional c }
+| lhs = shell_list SEMICOLON rhs = conditional { ShellListForeground(lhs, BaseConditional(rhs)) }
+| lhs = shell_list AMPERSAND rhs = conditional { ShellListBackground(lhs, BaseConditional(rhs)) }
+
 program:
-| c = conditional EOF { c }
+| lst = shell_list EOF { BaseProgram lst }
+| lst = shell_list AMPERSAND EOF { ProgramBackground lst }
+| lst = shell_list SEMICOLON EOF { ProgramForeground lst }

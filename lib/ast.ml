@@ -23,10 +23,18 @@ type conditional =
   | And of conditional * conditional
   | Or of conditional * conditional
 
+type shell_list = 
+| BaseConditional of conditional
+| ShellListForeground of shell_list * shell_list
+| ShellListBackground of shell_list * shell_list
+
 (* TODO: Update the program typedef each time I add a new grammar feature.
    Requires updating eveything everywhere else. So tedious. Perhaps investigate using modules
    for encapsulation? *)
-type program = conditional
+type program = 
+| BaseProgram of shell_list
+| ProgramForeground of shell_list
+| ProgramBackground of shell_list
 
 let variable_to_string (varname, varval) =
   let resolvedval =

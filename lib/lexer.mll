@@ -21,6 +21,8 @@ rule token = parse
 | "||" { OR }
 | '|' { PIPE }
 | '=' { EQ }
+| '&' { AMPERSAND }
+| ';' { SEMICOLON }
 | variable as lxm { VAR lxm }
 | word as lxm { WORD lxm }
 | eof { EOF } 

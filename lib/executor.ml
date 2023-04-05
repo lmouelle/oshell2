@@ -39,7 +39,7 @@ let resolve_vars shell_vars { executable; variables; args; redirections } =
   let args' = List.map (resolve_var shell_vars') args in
   { executable = executable'; variables; redirections; args = args' }
 
-let exec_pipeline shell_vars pipeline : exec_result =
+let exec_pipeline shell_vars pipeline wait : exec_result =
   let tempin = Unix.dup Unix.stdin in
   let pipeline_array = Array.of_list pipeline in
   let accumulated_shell_vars = ref shell_vars in
@@ -86,10 +86,12 @@ let exec_pipeline shell_vars pipeline : exec_result =
       raise
       @@ ExecError ("Fork failed for command: " ^ command_to_string command)
     else if pid > 0 then
-      let _, status = Unix.waitpid [ Unix.WUNTRACED ] pid in
-      match status with
-      | Unix.WEXITED exitcode -> lastexitcode := exitcode
-      | _ -> failwith "TODO: Stopped and signalled processes unimplemented"
+      if wait then
+        let _, status = Unix.waitpid [ Unix.WUNTRACED ] pid in
+        match status with
+        | Unix.WEXITED exitcode -> lastexitcode := exitcode
+        | _ -> failwith "TODO: Stopped and signalled processes unimplemented"
+      else ()
     else (
       List.iter redirect command.redirections;
       if command.executable <> String.empty then
@@ -104,17 +106,29 @@ let exec_pipeline shell_vars pipeline : exec_result =
         ("$?", String (string_of_int !lastexitcode)) :: !accumulated_shell_vars;
     }
 
-let rec exec_conditional shell_vars = function
-  | BasePipeline p -> exec_pipeline shell_vars p
+let rec exec_conditional shell_vars wait = function
+  | BasePipeline p -> exec_pipeline shell_vars p wait
   | Or (lhs, rhs) ->
       let ({ exitcode; shell_vars } as result) =
-        exec_conditional shell_vars lhs
+        exec_conditional shell_vars wait lhs
       in
-      if exitcode <> 0 then exec_conditional shell_vars rhs else result
+      if exitcode <> 0 then exec_conditional shell_vars wait rhs else result
   | And (lhs, rhs) ->
       let ({ exitcode; shell_vars } as result) =
-        exec_conditional shell_vars lhs
+        exec_conditional shell_vars wait lhs
       in
-      if exitcode <> 0 then result else exec_conditional shell_vars rhs
+      if exitcode <> 0 then result else exec_conditional shell_vars wait rhs
 
-let exec = exec_conditional
+let rec exec_shell_list shell_vars wait = function
+  | BaseConditional c -> exec_conditional shell_vars wait c
+  | ShellListBackground (lhs, rhs) -> 
+    let {shell_vars = shell_vars'; exitcode = _} = exec_shell_list shell_vars false lhs in
+    exec_shell_list shell_vars' wait rhs
+  | ShellListForeground (lhs, rhs) -> 
+    let {shell_vars = shell_vars'; exitcode = _} = exec_shell_list shell_vars true lhs in
+    exec_shell_list shell_vars' wait rhs
+
+let exec shell_vars = function
+  | BaseProgram p -> exec_shell_list shell_vars true p
+  | ProgramBackground p -> exec_shell_list shell_vars false p
+  | ProgramForeground p -> exec_shell_list shell_vars true p
