@@ -12,67 +12,128 @@
   redirection: FILE_DESC? > FILENAME | FILE_DESC? < FILENAME 
 */
 
-%token <string> VAR
 %token <string> WORD
-%token <int option> LEFTARROW
-%token <int option> RIGHTARROW
-%token PIPE
-%token EQ
-%token AND OR
-%token SEMICOLON AMPERSAND
-%token EOF
+%token <string> ASSIGNMENT_WORD
+%token <string> NAME
+%token NEWLINE
+%token <int> IO_NUMBER
+
+%token AND_IF OR_IF
+%token DLESS DGREAT
+
+%token If Then Else Elif Fi Do Done
+%token While 
+
+%token Lbrace Rbrace Bang
+%token In
+
 %start program
 
-%type <Ast.redirection> redirection
-%type <Ast.command> command
-%type <Ast.pipeline> pipeline
-%type <Ast.conditional> conditional
 %type <Ast.program> program
-%type <Ast.variable_entry> assignment
-%type <Ast.shell_list> shell_list
 
 %%
 
-assignment:
-| varname = VAR EQ varval = WORD { (varname, String varval) }
-| varname = VAR EQ varval = VAR { (varname, Variable varval) }
+program:
+| linebreak cmds = complete_commands linebreak  { Some cmds }
+| linebreak { None }
 
-redirection:
-| fd = LEFTARROW f = WORD { 
-  match fd with
-  | None -> { redirection_type = Input; filename = f; file_desc = 0 }
-  | Some n -> { redirection_type = Input; filename = f; file_desc = n }
-}
-| fd = RIGHTARROW f = WORD { 
-  match fd with
-  | None -> { redirection_type = Output; filename = f; file_desc = 1 }
-  | Some n -> { redirection_type = Output; filename = f; file_desc = n }
- }
+complete_commands: 
+| lst = complete_commands newline_list item = complete_command { lst @ [item] }
+| item = complete_command { [item] }
 
-word_or_var:
-| w = WORD { w }
-| v = VAR { v }
-
-command:
-| variables = assignment* executable = WORD args = word_or_var* redirections = redirection*
-{ {executable; args; redirections; variables} }
-| variables = assignment+
-{ {executable = String.empty; args = []; redirections = []; variables} }
-
-pipeline:
-| commands = separated_list(PIPE, command) { commands }
-
-conditional:
-| p = pipeline { BasePipeline p }
-| p1 = pipeline AND p2 = conditional { And(BasePipeline(p1), p2) }
-| p1 = pipeline OR p2 = conditional { Or(BasePipeline(p1), p2) }
+complete_command:
+| lst = shell_list ";" { CompleteCommandForeground lst }
+| lst = shell_list "&" { CompleteCommandBackground lst }
+| lst = shell_list { CompleteCommandShellList lst }
 
 shell_list:
-| c = conditional { BaseConditional c }
-| lhs = shell_list SEMICOLON rhs = conditional { ShellListForeground(lhs, BaseConditional(rhs)) }
-| lhs = shell_list AMPERSAND rhs = conditional { ShellListBackground(lhs, BaseConditional(rhs)) }
+| lst = shell_list ";" cond = and_or { ShellListForeground (lst, cond) }
+| lst = shell_list "&" cond = and_or { ShellListBackground (lst, cond) }
+| cond = and_or { ShellListCondtional cond }
 
-program:
-| lst = shell_list EOF { BaseProgram lst }
-| lst = shell_list AMPERSAND EOF { ProgramBackground lst }
-| lst = shell_list SEMICOLON EOF { ProgramForeground lst }
+and_or:
+| p = pipeline { ConditionalPipeline p }
+| cond = and_or AND_IF linebreak p = pipeline { ConditionalAnd(cond, p)  }
+| cond = and_or OR_IF linebreak p = pipeline { ConditionalOr(cond, p) }
+
+pipeline:
+| p = pipe_sequence { p }
+
+pipe_sequence: 
+| c = command { [c] }
+| seq = pipe_sequence "|" linebreak c = command { seq @ [c] }
+
+command:
+| c = simple_command { CommandSimpleCommand c }
+| c = compound_command { CommandCompoundCommand c }
+| c = compound_command newredirs = redirect_list 
+{ 
+  let oldredirs = c.redirs in
+  let c' = {c with redirs = (oldredirs @ newredirs)} in
+  CommandCompoundCommand(c')
+}
+
+compound_command:
+| if_clause
+
+if_clause:
+| If test = compound_list Then body = compound_list rem = else_part Fi {
+  let (elsepart, lst) = rem in
+  CompoundCommandIf {ifelse = elsepart, tests = {test, body} :: lst}
+}
+| If test = compound_list Then body = compound_list Fi { CompoundCommandIf {ifelse = None, tests = [{test, body}]} }
+
+/*type is (a * b), where a is 'compount_list option' representing the else clause, and
+ b is a list of pairs of tests and bodies.
+ 
+ example:
+
+ if test0 then body0 "elif test1 then body1 else body2" // first few words are matched by if_clause
+ produces:
+
+ */
+else_part:
+| Elif test = compound_list Then body = compound_list { 
+  (None, {test, body})
+ }
+| Elif test = compound_list Then body = compound_list rem = else_part {
+  let (elsepart, lst) = rem in
+  (elsepart, {test, body} :: lst)
+}
+| Else remain = compound_list { (Some remain, []) }
+
+redirect_list:
+| io_redirect
+| redirect_list io_redirect
+
+io_redirect:
+| io_file
+| IO_NUMBER io_file
+
+io_file:
+| "<" filename
+| DLESS filename
+| DGREAT filename
+
+filename:
+| WORD
+
+term:
+| term seperator and_or
+| and_or
+
+compound_list:
+| linebreak term
+| linebreak term seperator
+
+linebreak: 
+| newline_list 
+| /* empty */
+
+newline_list:
+| NEWLINE
+| newline_list NEWLINE
+
+seperator:
+| seperator_op linebreak
+| newline_list

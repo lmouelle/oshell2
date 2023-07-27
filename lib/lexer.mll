@@ -12,11 +12,9 @@ let variable = '$' word
 
 rule token = parse
 | whitespace { token lexbuf }
-| newline { token lexbuf }
-| number as n '>' { RIGHTARROW(Some (int_of_string n)) }
-| number as n '<' { LEFTARROW(Some (int_of_string n)) }
-| '>' { RIGHTARROW(None) }
-| '<' { LEFTARROW(None) }
+| newline { NEWLINE }
+| '>' { RIGHTARROW }
+| '<' { LEFTARROW }
 | "&&" { AND }
 | "||" { OR }
 | '|' { PIPE }
