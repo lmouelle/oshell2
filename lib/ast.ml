@@ -1,7 +1,7 @@
 
 type redirection = {
   filename: string;
-  io_num: int option;
+  io_num: int;
 }
 
 type assignment = {
