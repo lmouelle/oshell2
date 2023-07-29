@@ -18,14 +18,16 @@
 %token NEWLINE
 %token <int> IO_NUMBER
 
+/* && || */
 %token AND_IF OR_IF
-%token DLESS DGREAT
 
 %token If Then Else Elif Fi Do Done
 %token While 
 
 %token Lbrace Rbrace Bang
 %token In
+
+%token EOL
 
 %start program
 
@@ -73,8 +75,57 @@ command:
   CommandCompoundCommand(c')
 }
 
+simple_command:
+| prefix = cmd_prefix cmd = cmd_word suffix = cmd_suffix {
+  let redirections_prefix = List.map (fun (a, b) -> b) prefix in
+  let assignments = List.map (fun (a, b) -> a) prefix in
+  let redirections_suffix = List.map (fun (a, b) -> b) suffix in
+  let args = List.map (fun (a, b) -> a) suffix in
+  let redirections = redirections_prefix @ redirections_suffix in
+  {name = Some cmd; redirections; assignments; args}
+}
+| prefix = cmd_prefix cmd = cmd_word {
+  let redirections = List.map (fun (a, b) -> b) prefix in
+  let assignments = List.map (fun (a, b) -> a) prefix in
+  {name = Some cmd; redirections; assignments; args = []}
+}
+| prefix = cmd_prefix { 
+  let redirections = List.map (fun (a, b) -> b) prefix in
+  let assignments = List.map (fun (a, b) -> a) prefix in
+  {name = None; redirections; assignments; args = []}
+}
+| cmd = cmd_name suffix = cmd_suffix {  
+  let redirections = List.map (fun (a, b) -> b) suffix in
+  let args = List.map (fun (a, b) -> a) suffix in
+  {name = Some cmd; redirections; assignments = []; args}
+}
+| cmd = cmd_name { {name = Some cmd; redirections = []; assignments = []; args = []} }
+
+cmd_prefix:
+| iof = io_redirect { [None, Some iof] }
+| rest = cmd_prefix iof = io_redirect { 
+  rest @ [None, Some iof]
+ }
+| w = ASSIGNMENT_WORD { [Some w, None] }
+| rest = cmd_prefix w = ASSIGNMENT_WORD { 
+  rest @ [Some w, None]
+}
+
+cmd_suffix:
+| iof = io_redirect { [None, Some iof] }
+| rest = cmd_suffix iof = io_redirect  { 
+  rest @ [None, Some iof]
+}
+| w = WORD { [Some w, None] }
+| rest = cmd_suffix w = WORD { 
+  rest @ [Some w, None]
+}
+
+cmd_name: 
+| w = WORD { w }
+
 compound_command:
-| if_clause
+| cmd = if_clause { cmd }
 
 if_clause:
 | If test = compound_list Then body = compound_list rem = else_part Fi {
@@ -103,37 +154,49 @@ else_part:
 | Else remain = compound_list { (Some remain, []) }
 
 redirect_list:
-| io_redirect
-| redirect_list io_redirect
+| redir = io_redirect { [redir] }
+| lst = redirect_list redir = io_redirect { lst @ [redir] }
 
 io_redirect:
-| io_file
-| IO_NUMBER io_file
+| iof = io_file { iof }
+| num = IO_NUMBER f = io_file {
+  {f with io_num = num}
+ }
 
 io_file:
-| "<" filename
-| DLESS filename
-| DGREAT filename
+| ">" f = filename { {filename = f, io_num = 0} }
+| "<" f = filename { {filename = f, io_num = 1} }
 
 filename:
-| WORD
+| w = WORD { w }
 
 term:
-| term seperator and_or
-| and_or
+| t = term "&" linebreak cond = and_or {
+  TermBackground (t, cond)
+}
+| t = term ";" linebreak cond = and_or {
+  TermForeground (t, cond)
+}
+| cond = and_or {
+  TermConditional cond
+}
 
 compound_list:
-| linebreak term
-| linebreak term seperator
+| linebreak t = term { 
+  CompoundListTerm t
+ }
+| linebreak t = term "&" linebreak {
+  CompoundListBackground t
+}
+| linebreak t = term ";" linebreak {
+  CompoundListForeground t
+}
 
-linebreak: 
-| newline_list 
-| /* empty */
+linebreak:
+| newline_list { None }
+| /* empty */ { None }
 
 newline_list:
-| NEWLINE
-| newline_list NEWLINE
+| NEWLINE { None }
+| newline_list NEWLINE { None }
 
-seperator:
-| seperator_op linebreak
-| newline_list
