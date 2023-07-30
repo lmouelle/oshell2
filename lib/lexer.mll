@@ -12,8 +12,10 @@ let newline = '\n' | "\r\n"
 rule token = parse
 | whitespace { token lexbuf }
 | newline { NEWLINE }
-| '>' { RIGHTARROW }
-| '<' { LEFTARROW }
+| number as n '>' { RIGHTARROW(Some (int_of_string n)) }
+| number as n '<' { LEFTARROW(Some (int_of_string n)) }
+| '>' { RIGHTARROW (None) }
+| '<' { LEFTARROW (None) }
 | "&&" { AND_IF }
 | "||" { OR_IF }
 | '|' { PIPE }

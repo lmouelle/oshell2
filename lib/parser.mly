@@ -5,12 +5,11 @@
 %token <string> WORD
 %token <string> ASSIGNMENT_WORD
 %token NEWLINE
-%token <int> IO_NUMBER
 
 %token SEMICOLON ";"
 %token AMPERSAND "&"
-%token RIGHTARROW ">"
-%token LEFTARROW "<"
+%token <int option> RIGHTARROW ">"
+%token <int option> LEFTARROW "<"
 %token PIPE "|"
 
 %token EOF
@@ -175,14 +174,20 @@ redirect_list:
 | lst = redirect_list redir = io_redirect { lst @ [redir] }
 
 io_redirect:
-| iof = io_file { iof }
-| num = IO_NUMBER f = io_file {
-  {f with io_num = num}
- }
-
-io_file:
-| ">" f = filename { {filename = f; io_num = 0} }
-| "<" f = filename { {filename = f; io_num = 1} }
+| io_num_opt = RIGHTARROW file = filename {
+  let io_num = match io_num_opt with
+  | None -> 1
+  | Some n -> n
+  in
+  {filename = file; io_num}
+}
+| io_num_opt = LEFTARROW file = filename {
+  let io_num = match io_num_opt with
+  | None -> 0
+  | Some n -> n
+  in
+  {filename = file; io_num}
+}
 
 filename:
 | w = WORD { w }
