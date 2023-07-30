@@ -23,6 +23,7 @@ and if_clause_test = {
 
 and compound_command = 
 | CompoundCommandIf of { ifelse: compound_list option; tests : if_clause_test list }
+| CompoundCommandWhile of { test: compound_list; body: compound_list}
 
 and term = 
 | TermConditional of conditional
@@ -31,14 +32,18 @@ and term =
 
 and compound_list =
 | CompoundListTerm of term 
-| CompoundListForeground of conditional
-| CompoundListBackground of conditional
+| CompoundListForeground of term
+| CompoundListBackground of term
 
 and command = 
 | CommandSimpleCommand of simple_command
-| CommandCompoundCommand of compound_command
+| CommandCompoundCommand of (compound_command * redirection list)
 
-and pipeline = command list
+and pipe_sequence = command list
+
+and pipeline =
+| PipelineBangSeq of pipe_sequence
+| PipelineSeq of pipe_sequence
 
 and conditional = 
 | ConditionalPipeline of pipeline
