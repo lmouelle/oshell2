@@ -13,6 +13,8 @@
 %token LEFTARROW "<"
 %token PIPE "|"
 
+%token EOF
+
 /* The following are the operators (see XBD Operator)
    containing more than one character. */
 /* && || */
@@ -44,8 +46,8 @@
 %%
 
 program:
-| linebreak cmds = complete_commands linebreak  { Some cmds }
-| linebreak { None }
+| linebreak cmds = complete_commands linebreak EOF { Some cmds }
+| linebreak EOF { None }
 
 complete_commands: 
 | lst = complete_commands newline_list item = complete_command { lst @ [item] }
@@ -84,26 +86,26 @@ command:
 
 simple_command:
 | prefix = cmd_prefix cmd = cmd_word suffix = cmd_suffix {
-  let redirections_prefix = List.filter_map (fun (a, b) -> b) prefix in
-  let assignments = List.filter_map (fun (a, b) -> a) prefix in
-  let redirections_suffix = List.filter_map (fun (a, b) -> b) suffix in
-  let args = List.filter_map (fun (a, b) -> a) suffix in
+  let redirections_prefix = List.filter_map (fun (_, b) -> b) prefix in
+  let assignments = List.filter_map (fun (a, _) -> a) prefix in
+  let redirections_suffix = List.filter_map (fun (_, b) -> b) suffix in
+  let args = List.filter_map (fun (a, _) -> a) suffix in
   let redirections = redirections_prefix @ redirections_suffix in
   {name = Some cmd; redirections; assignments; args}
 }
 | prefix = cmd_prefix cmd = cmd_word {
-  let redirections = List.filter_map (fun (a, b) -> b) prefix in
-  let assignments = List.filter_map (fun (a, b) -> a) prefix in
+  let redirections = List.filter_map (fun (_, b) -> b) prefix in
+  let assignments = List.filter_map (fun (a, _) -> a) prefix in
   {name = Some cmd; redirections; assignments; args = []}
 }
 | prefix = cmd_prefix { 
-  let redirections = List.filter_map (fun (a, b) -> b) prefix in
-  let assignments = List.filter_map (fun (a, b) -> a) prefix in
+  let redirections = List.filter_map (fun (_, b) -> b) prefix in
+  let assignments = List.filter_map (fun (a, _) -> a) prefix in
   {name = None; redirections; assignments; args = []}
 }
 | cmd = cmd_name suffix = cmd_suffix {  
-  let redirections = List.filter_map (fun (a, b) -> b) suffix in
-  let args = List.filter_map (fun (a, b) -> a) suffix in
+  let redirections = List.filter_map (fun (_, b) -> b) suffix in
+  let args = List.filter_map (fun (a, _) -> a) suffix in
   {name = Some cmd; redirections; assignments = []; args}
 }
 | cmd = cmd_name { {name = Some cmd; redirections = []; assignments = []; args = []} }
@@ -208,12 +210,12 @@ compound_list:
 }
 
 linebreak:
-| newline_list { None }
-| /* empty */ { None }
+| newline_list { 0 }
+| /* empty */ { 0 }
 
 newline_list:
-| NEWLINE { None }
-| newline_list NEWLINE { None }
+| NEWLINE { 0 }
+| newline_list NEWLINE { 0 }
 
 while_clause: 
 | While test = compound_list body = do_group {

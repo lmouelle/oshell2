@@ -1,17 +1,11 @@
-
 type redirection = {
   filename: string;
   io_num: int;
 }
 
-type assignment = {
-  varname : string;
-  varval : string
-}
-
 type simple_command = {
   redirections : redirection list;
-  assignments : assignment list;
+  assignments : string list;
   args: string list;
   name: string option
 }

@@ -1,5 +1,4 @@
 open Oshell2.Parseutils
-open Oshell2.Executor
 
 let repl _ =
   failwith "TODO"

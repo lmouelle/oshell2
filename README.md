@@ -30,18 +30,6 @@ so i somehow need to access that C macro from ocaml code. Not sure how to do thi
 
 So I can't do the full file descriptor duplication at the moment.
 
-# Misc issues
-
-I'd like to be able to do something like
-```bash
-$foo = ls
-$foo directory
-```
-
-but sadly my grammar does not accomodate that. It's hard to do that with my setup without shift/reduce conflicts all over.
-How am I supposed to know if the string `$foo directory`, upon seeing the token `$foo`, is a new variable definition or
-an invocation? This definitely is a known problem, but at this time I do not know the answer.
-
 # Features I want
 
 I'm not great at keeping READMEs current so this will get wildly out of date but here is what I have as of writing (March 2023) and what I want.
@@ -63,3 +51,12 @@ I want:
 - Case
 
 In general the closer I get to a proper `sh` implementation, the better. This will take time.
+
+# Rewrite with open group grammar
+
+This branch contains a rewrite from scratch of the grammar, and as a result the entire executor process.
+I'm transcribing the Open Group linked grammar as closely as I can into Menhir instead of trying to use my own grammar.
+This will take some time to implement but should be better overall.
+
+One thing that bugs me, the open group grammar did not have any EOF in there, but I had to add some to get Menhir to reduce rules correctly.
+Why do they not have it? But I need to?
