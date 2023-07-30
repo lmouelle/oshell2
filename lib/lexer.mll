@@ -5,7 +5,7 @@
 
 let whitespace = [' ' '\t']+
 let string = '"' [^ '"']* '"'
-let word = [^ '<' '>' ' ' '\t']+ | string
+let word = [^ '<' '>' ' ' '\t' '\n']+ | string
 let number = ['0' - '9']+
 let newline = '\n' | "\r\n"
 
