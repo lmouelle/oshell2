@@ -21,4 +21,5 @@ rule token = parse
 | ';' { SEMICOLON }
 | word as lxm { WORD lxm }
 |  '\n' { NEWLINE }
+| eof { EOF }
 | _ as lxm { raise @@ SyntaxError("Unexpected char " ^ (String.make 1 lxm)) }
