@@ -2,14 +2,15 @@
     open Ast
 %}
 
+%token <string> VAR
 %token <string> WORD
-%token <string> ASSIGNMENT_WORD
 %token NEWLINE
 
 %token SEMICOLON ";"
 %token AMPERSAND "&"
 %token <int option> RIGHTARROW ">"
 %token <int option> LEFTARROW "<"
+%token EQ "="
 %token PIPE "|"
 
 %token EOF
@@ -114,10 +115,14 @@ cmd_prefix:
 | rest = cmd_prefix iof = io_redirect { 
   rest @ [None, Some iof]
  }
-| w = ASSIGNMENT_WORD { [Some w, None] }
-| rest = cmd_prefix w = ASSIGNMENT_WORD { 
+| w = assignment { [Some w, None] }
+| rest = cmd_prefix w = assignment { 
   rest @ [Some w, None]
 }
+
+assignment:
+| varname = VAR EQ varval = WORD { { varname; varval } }
+| varname = VAR EQ varval = VAR { {varname; varval} }
 
 cmd_suffix:
 | iof = io_redirect { [None, Some iof] }

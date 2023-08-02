@@ -3,9 +3,14 @@ type redirection = {
   io_num: int;
 }
 
+type assignment = {
+  varval : string;
+  varname : string
+}
+
 type simple_command = {
   redirections : redirection list;
-  assignments : string list;
+  assignments : assignment list;
   args: string list;
   name: string option
 }
