@@ -1,11 +1,13 @@
 open Oshell2.Parseutils
+open Oshell2.Executor
 
-let repl _ =
-  failwith "TODO"
+let repl _ = failwith "TODO"
 
 let runcommand command_string =
-  let _prog = parse_string command_string in
-  failwith "TODO"
+  let prog = parse_string command_string in
+  let result = Unix.handle_unix_error exec [] prog in
+  let lastexitcode = List.assoc "$?" result in
+  exit (int_of_string lastexitcode)
 
 let () =
   let len = Array.length Sys.argv in
