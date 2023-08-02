@@ -121,8 +121,8 @@ cmd_prefix:
 }
 
 assignment:
-| varname = VAR EQ varval = WORD { { varname; varval } }
-| varname = VAR EQ varval = VAR { {varname; varval} }
+| varname = WORD EQ varval = WORD { { varname; varval } }
+| varname = WORD EQ varval = VAR { {varname; varval} }
 
 cmd_suffix:
 | iof = io_redirect { [None, Some iof] }
