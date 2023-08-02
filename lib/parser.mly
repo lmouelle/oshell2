@@ -46,8 +46,8 @@
 %%
 
 program:
-| linebreak cmds = complete_commands linebreak EOF { Some cmds }
-| linebreak EOF { None }
+| linebreak cmds = complete_commands linebreak EOF { cmds }
+| linebreak EOF { [] }
 
 complete_commands: 
 | lst = complete_commands newline_list item = complete_command { lst @ [item] }

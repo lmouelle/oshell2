@@ -59,4 +59,4 @@ and complete_command =
 | CompleteCommandForeground of shell_list
 | CompleteCommandBackground of shell_list
 
-and program = complete_command list option
+and program = complete_command list
