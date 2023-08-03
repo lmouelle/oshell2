@@ -33,8 +33,8 @@ let exec_redirection { io_num; filename } =
 
 let exec_simple_command vars cmd =
   List.iter exec_redirection cmd.redirections;
-  let executable = Option.map (fun name -> if String.starts_with ~prefix:"$" name then resolve_var vars name else name) cmd.name in
-  let args = List.filter (String.starts_with ~prefix:"$") cmd.args |> List.map (resolve_var vars) in
+  let executable = Option.map (resolve_var vars) cmd.name in
+  let args = List.map (resolve_var vars) cmd.args in
   match executable with
   | None -> vars
   | Some executable ->

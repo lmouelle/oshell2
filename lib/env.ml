@@ -10,6 +10,7 @@ let add_var env name value =
   (name, entry) :: env
 
 let rec resolve_var env name =
+  if not @@ String.starts_with ~prefix:"$" name then name else
   match List.assoc_opt name env with
   | None -> String.empty
   | Some (String s) -> s
