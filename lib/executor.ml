@@ -20,12 +20,45 @@ let wait_for_result executor_func (env : env) body : env =
   | Unix.WEXITED exitcode -> ("$?", string_of_int exitcode) :: vars'
   | _ -> failwith "TODO: Stopped and signalled processes unimplemented"
 
+let exec_redirection { io_num; filename } =
+  match io_num with
+  | 0 ->
+      let filehandle = Unix.openfile filename [ O_RDONLY ] 0o640 in
+      Unix.dup2 filehandle Unix.stdin
+  | 1 ->
+      let filehandle =
+        Unix.openfile filename [ O_TRUNC; O_CREAT; O_WRONLY ] 0o640
+      in
+      Unix.dup2 filehandle Unix.stdout
+  | 2 ->
+      let filehandle =
+        Unix.openfile filename [ O_TRUNC; O_CREAT; O_WRONLY ] 0o640
+      in
+      Unix.dup2 filehandle Unix.stderr
+  | _ -> failwith "TODO: Impl arbitrary file descriptor redirection"
+
+let exec_simple_command vars cmd =
+  List.iter exec_redirection cmd.redirections;
+  (* TODO: Impl var resolution *)
+  match cmd.name with
+  | None -> vars
+  | Some executable ->
+      Unix.execvp executable (Array.of_list (executable :: cmd.args))
+
+let exec_compound_command vars cmd = failwith "todo"
+
 (* TODO redirections and shell variable expansion in here? *)
-let exec_command vars cmd = failwith "TODO"
+let exec_command (vars : env) cmd =
+  match cmd with
+  | CommandSimpleCommand simple_cmd -> exec_simple_command vars simple_cmd
+  | CommandCompoundCommand (compound_cmd, redirs) ->
+      let result = exec_compound_command vars compound_cmd in
+      List.iter exec_redirection redirs;
+      result
 
 (*TODO: How do we get last exit code/$? in this arrangement?
   Set the pid of the last process/$! and rely on caller to do wait_for_result I guess? *)
-let exec_pipe_seq vars seq =
+let exec_pipe_seq (vars : env) seq =
   let temp_stdin = Unix.dup Unix.stdin in
   let pipeline_array = Array.of_list seq in
   let upper_index_bound = Array.length pipeline_array - 1 in
@@ -43,7 +76,7 @@ let exec_pipe_seq vars seq =
       Unix.dup2 fd_out Unix.stdout;
       Unix.close fd_out;
       Unix.close fd_in;
-      exec_command vars cmd)
+      ignore (exec_command vars cmd))
   done;
   let vars' =
     if Array.length pipeline_array = 0 then vars
@@ -80,7 +113,7 @@ let rec exec_conditional vars cond : env =
 
 let rec exec_shell_list (vars : env) (lst : shell_list) : env =
   match lst with
-  | ShellListConditional cond -> 
+  | ShellListConditional cond ->
       let result = wait_for_result exec_conditional vars cond in
       result @ vars
   | ShellListForeground (lhs, cond) ->
