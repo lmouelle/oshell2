@@ -1,4 +1,3 @@
-type env = (string * string) list
 type redirection = { filename : string; io_num : int }
 type assignment = { varval : string; varname : string }
 
