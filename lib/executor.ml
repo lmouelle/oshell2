@@ -1,15 +1,9 @@
 open Ast
 open Env
 
-(*For now I'm making env a (string * string) list and transorming int values
-  like $? and $!  (last exit code and last pid) back and forth from strings into the env.
-  Long term I need to get rid of this and replace it with something type safe.
-
-  This means I NEED to remember to set $! and $? every time though. Sucks.
-
-  Also I keep updating the environment all over the place by hand, do I need to do that?
-
-  Also, replace these FATAL FORK FAILURES and all FAILWITHS with proper custom exceptions
+(*
+  I keep updating the environment all over the place by hand, do I need to do that?
+  TODO: Replace these FATAL FORK FAILURES and all FAILWITHS with proper custom exceptions
 *)
 
 let wait_for_result executor_func (env : env) body : env =
@@ -39,11 +33,12 @@ let exec_redirection { io_num; filename } =
 
 let exec_simple_command vars cmd =
   List.iter exec_redirection cmd.redirections;
-  (* TODO: Impl var resolution *)
-  match cmd.name with
+  let executable = Option.map (fun name -> if String.starts_with ~prefix:"$" name then resolve_var vars name else name) cmd.name in
+  let args = List.filter (String.starts_with ~prefix:"$") cmd.args |> List.map (resolve_var vars) in
+  match executable with
   | None -> vars
   | Some executable ->
-      Unix.execvp executable (Array.of_list (executable :: cmd.args))
+      Unix.execvp executable (Array.of_list (executable :: args))
 
 let exec_compound_command _ _ = failwith "todo"
 
