@@ -5,9 +5,9 @@ let repl _ = failwith "TODO"
 
 let runcommand command_string =
   let prog = parse_string command_string in
-  let result = Unix.handle_unix_error exec [] prog in
-  let lastexitcode = List.assoc "$?" result in
-  exit (int_of_string lastexitcode)
+  let result = Unix.handle_unix_error exec Oshell2.Env.empty prog in
+  let lastexitcode = Oshell2.Env.get_last_exitcode result in
+  exit lastexitcode
 
 let () =
   let len = Array.length Sys.argv in

@@ -1,4 +1,5 @@
 open Ast
+open Env
 
 (*For now I'm making env a (string * string) list and transorming int values
   like $? and $!  (last exit code and last pid) back and forth from strings into the env.
@@ -13,11 +14,10 @@ open Ast
 
 let wait_for_result executor_func (env : env) body : env =
   let result = executor_func env body in
-  let vars' = result @ env in
-  let pid = List.assoc "$!" vars' |> int_of_string in
+  let pid = get_last_pid result in
   let _, status = Unix.waitpid [ Unix.WUNTRACED ] pid in
   match status with
-  | Unix.WEXITED exitcode -> ("$?", string_of_int exitcode) :: vars'
+  | Unix.WEXITED exitcode -> update_last_exitcode result exitcode
   | _ -> failwith "TODO: Stopped and signalled processes unimplemented"
 
 let exec_redirection { io_num; filename } =
@@ -45,7 +45,7 @@ let exec_simple_command vars cmd =
   | Some executable ->
       Unix.execvp executable (Array.of_list (executable :: cmd.args))
 
-let exec_compound_command vars cmd = failwith "todo"
+let exec_compound_command _ _ = failwith "todo"
 
 (* TODO redirections and shell variable expansion in here? *)
 let exec_command (vars : env) cmd =
@@ -84,7 +84,7 @@ let exec_pipe_seq (vars : env) seq =
       let cmd = pipeline_array.(upper_index_bound) in
       let pid = Unix.fork () in
       if pid < 0 then failwith "FATAL FORK FAILURE"
-      else if pid > 0 then ("?!", pid |> string_of_int) :: vars
+      else if pid > 0 then update_last_pid vars pid
       else exec_command vars cmd
   in
   Unix.dup2 temp_stdin Unix.stdin;
@@ -94,9 +94,9 @@ let exec_pipeline vars pipe =
   match pipe with
   | PipelineBangSeq seq ->
       let result = exec_pipe_seq vars seq in
-      let exitcode = List.assoc "$?" result |> int_of_string in
-      if exitcode <> 0 then ("$?", string_of_int 0) :: result
-      else ("$?", string_of_int 1) :: result
+      let exitcode = get_last_exitcode result in
+      if exitcode <> 0 then update_last_exitcode result 0
+      else update_last_exitcode result 1
   | PipelineSeq seq -> exec_pipe_seq vars seq
 
 let rec exec_conditional vars cond : env =
@@ -104,18 +104,17 @@ let rec exec_conditional vars cond : env =
   | ConditionalPipeline p -> exec_pipeline vars p
   | ConditionalOr (lhs, rhs) ->
       let result = exec_conditional vars lhs in
-      let exitcode = List.assoc "$?" result |> int_of_string in
+      let exitcode = get_last_exitcode result in
       if exitcode <> 0 then exec_pipeline result rhs else result
   | ConditionalAnd (lhs, rhs) ->
       let result = exec_conditional vars lhs in
-      let exitcode = List.assoc "$?" result |> int_of_string in
+      let exitcode = get_last_exitcode result in
       if exitcode <> 0 then result else exec_pipeline result rhs
 
 let rec exec_shell_list (vars : env) (lst : shell_list) : env =
   match lst with
   | ShellListConditional cond ->
-      let result = wait_for_result exec_conditional vars cond in
-      result @ vars
+      wait_for_result exec_conditional vars cond
   | ShellListForeground (lhs, cond) ->
       let lhs_result = wait_for_result exec_shell_list vars lhs in
       wait_for_result exec_conditional lhs_result cond
@@ -132,10 +131,8 @@ let exec_complete_command (vars : env) (complete_command : complete_command) =
 let rec exec (vars : env) (prog : program) : env =
   match prog with
   | [] -> vars
-  | cmd :: [] ->
-      let result = exec_complete_command vars cmd in
-      result @ vars
+  | cmd :: [] -> exec_complete_command vars cmd
   | cmd :: cmds ->
       let result = exec_complete_command vars cmd in
-      let vars' = vars @ result in
+      let vars' = merge_envs result vars in
       exec vars' cmds
