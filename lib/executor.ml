@@ -31,7 +31,7 @@ let exec_redirection { io_num; filename } =
       Unix.dup2 filehandle Unix.stderr
   | _ -> failwith "TODO: Impl arbitrary file descriptor redirection"
 
-let exec_simple_command vars cmd =
+let rec exec_simple_command vars cmd =
   List.iter exec_redirection cmd.redirections;
   let executable = Option.map (resolve_var vars) cmd.name in
   let args = List.map (resolve_var vars) cmd.args in
@@ -40,10 +40,8 @@ let exec_simple_command vars cmd =
   | Some executable ->
       Unix.execvp executable (Array.of_list (executable :: args))
 
-let exec_compound_command _ _ = failwith "todo"
-
 (* TODO redirections and shell variable expansion in here? *)
-let exec_command (vars : env) cmd =
+and exec_command (vars : env) cmd =
   match cmd with
   | CommandSimpleCommand simple_cmd -> exec_simple_command vars simple_cmd
   | CommandCompoundCommand (compound_cmd, redirs) ->
@@ -53,7 +51,7 @@ let exec_command (vars : env) cmd =
 
 (*TODO: How do we get last exit code/$? in this arrangement?
   Set the pid of the last process/$! and rely on caller to do wait_for_result I guess? *)
-let exec_pipe_seq (vars : env) seq =
+and exec_pipe_seq (vars : env) seq =
   let temp_stdin = Unix.dup Unix.stdin in
   let pipeline_array = Array.of_list seq in
   let upper_index_bound = Array.length pipeline_array - 1 in
@@ -85,7 +83,7 @@ let exec_pipe_seq (vars : env) seq =
   Unix.dup2 temp_stdin Unix.stdin;
   vars'
 
-let exec_pipeline vars pipe =
+and exec_pipeline vars pipe =
   match pipe with
   | PipelineBangSeq seq ->
       let result = exec_pipe_seq vars seq in
@@ -94,7 +92,7 @@ let exec_pipeline vars pipe =
       else update_last_exitcode result 1
   | PipelineSeq seq -> exec_pipe_seq vars seq
 
-let rec exec_conditional vars cond : env =
+and exec_conditional vars cond : env =
   match cond with
   | ConditionalPipeline p -> exec_pipeline vars p
   | ConditionalOr (lhs, rhs) ->
@@ -106,10 +104,59 @@ let rec exec_conditional vars cond : env =
       let exitcode = get_last_exitcode result in
       if exitcode <> 0 then result else exec_pipeline result rhs
 
-let rec exec_shell_list (vars : env) (lst : shell_list) : env =
+and exec_term vars = function
+  | TermConditional cond -> wait_for_result exec_conditional vars cond
+  | TermForeground (lhs, cond) ->
+      let lhs_result = wait_for_result exec_term vars lhs in
+      wait_for_result exec_conditional lhs_result cond
+  | TermBackground (lhs, cond) ->
+      let lhs_result = exec_term vars lhs in
+      wait_for_result exec_conditional lhs_result cond
+
+and exec_compound_list vars = function
+  | CompoundListForeground t | CompoundListTerm t ->
+      wait_for_result exec_term vars t
+  | CompoundListBackground t -> exec_term vars t
+
+and exec_compound_command vars = function
+  | CompoundCommandIf { ifelse; tests } ->
+      let rec exec_if_tests = function
+        | [] ->
+            (* Must always have at least initial if statement, list of 1 - n length*)
+            failwith "MALFORMED IF COMMAND"
+        | { test; body } :: [] -> (
+            let test_result = exec_compound_list vars test in
+            if get_last_exitcode test_result = 0 then
+              exec_compound_list vars body
+            else
+              match ifelse with
+              | None -> vars
+              | Some final_body -> exec_compound_list vars final_body)
+        | { test; body } :: remainder ->
+            let test_result = exec_compound_list vars test in
+            if get_last_exitcode test_result = 0 then
+              exec_compound_list vars body
+            else exec_if_tests remainder
+      in
+      let first_success_env = exec_if_tests tests in
+      if get_last_exitcode first_success_env <> 0 then
+        match ifelse with
+        | None -> vars
+        | Some clist -> exec_compound_list vars clist
+      else vars
+  | CompoundCommandWhile { test; body } ->
+      let rec eval_while prev_result =
+        let test_result = exec_compound_list vars test in
+        if get_last_exitcode test_result = 0 then
+          let body_result = exec_compound_list vars body in
+          eval_while body_result
+        else prev_result
+      in
+      eval_while vars
+
+and exec_shell_list (vars : env) (lst : shell_list) : env =
   match lst with
-  | ShellListConditional cond ->
-      wait_for_result exec_conditional vars cond
+  | ShellListConditional cond -> wait_for_result exec_conditional vars cond
   | ShellListForeground (lhs, cond) ->
       let lhs_result = wait_for_result exec_shell_list vars lhs in
       wait_for_result exec_conditional lhs_result cond
@@ -117,13 +164,13 @@ let rec exec_shell_list (vars : env) (lst : shell_list) : env =
       let lhs_result = exec_shell_list vars lhs in
       wait_for_result exec_conditional lhs_result cond
 
-let exec_complete_command (vars : env) (complete_command : complete_command) =
+and exec_complete_command (vars : env) (complete_command : complete_command) =
   match complete_command with
   | CompleteCommandShellList lst | CompleteCommandForeground lst ->
       wait_for_result exec_shell_list vars lst
   | CompleteCommandBackground lst -> exec_shell_list vars lst
 
-let rec exec (vars : env) (prog : program) : env =
+and exec (vars : env) (prog : program) : env =
   match prog with
   | [] -> vars
   | cmd :: [] -> exec_complete_command vars cmd
